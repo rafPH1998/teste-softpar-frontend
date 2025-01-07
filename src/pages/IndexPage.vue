@@ -35,7 +35,22 @@
 
           <q-input v-model="task.description" dense outlined class="col" readonly
             :style="{ textDecoration: task.completed ? 'line-through' : 'none' }" />
-          <q-btn icon="delete" flat round color="red" @click="deleteTask(task.id)" />
+
+          <q-btn icon="edit" :disable="task.completed" flat round color="primary" @click="editTask(task)" />
+          <q-btn icon="delete" :disable="task.completed" flat round color="red" @click="confirmDeleteTask(task.id)" />
+
+          <!-- modal para deletar uma tarefa-->
+          <q-dialog v-model="dialogVisible">
+            <q-card>
+              <q-card-section>
+                <div class="text-h6">Tem certeza que deseja excluir esta tarefa?</div>
+              </q-card-section>
+              <q-card-actions>
+                <q-btn flat label="Cancelar" color="primary" @click="dialogVisible = false" />
+                <q-btn flat label="Sim" color="negative" @click="deleteTaskConfirmed" />
+              </q-card-actions>
+            </q-card>
+          </q-dialog>
         </div>
       </div>
 
@@ -53,7 +68,7 @@
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" color="secondary" @click="closeModal" />
           <q-btn flat label="Adicionar" :loading="loadingSubmitTask" :disable="loadingSubmitTask" color="primary"
-            @click="addTaskFromModal" />
+            @click="addOrEditTask" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -76,8 +91,11 @@ interface Task {
 
 const tasks = ref<Task[]>([]);
 const isModalOpen = ref<boolean>(false);
+const isEditModel = ref<boolean>(false);
 const loadingSubmitTask = ref<boolean>(false);
-const modalData = ref({ title: '', description: '' });
+const modalData = ref<{ id?: number; title: string; description: string }>({ title: '', description: '' });
+const dialogVisible = ref<boolean>(false);
+const taskToDelete = ref<number | null>(null);
 
 const apiBaseUrl = 'http://localhost:8085/api/tasks';
 
@@ -101,31 +119,47 @@ const fetchTasks = async () => {
   }
 }
 
-const addTaskFromModal = async () => {
+const addOrEditTask = async () => {
   try {
     loadingSubmitTask.value = true;
 
-    const newTask = {
+    const taskData = {
       title: modalData.value.title,
       description: modalData.value.description,
-      completed: false,
+      completed: false
+    };
+
+    if (isEditModel.value && modalData.value.id) {
+
+      const res = await axios.put(`${apiBaseUrl}/${modalData.value.id}`, taskData);
+      if (res?.status === 200) {
+        const taskIndex = tasks.value.findIndex(task => task.id === modalData.value.id);
+        if (taskIndex !== -1) {
+          tasks.value[taskIndex] = res.data;
+        }
+        alert("Tarefa editada com sucesso!");
+        closeModal();
+      }
+    } else {
+      const res = await axios.post(apiBaseUrl, taskData);
+      if (res?.status === 201) {
+        alert("Tarefa criada com sucesso!");
+        tasks.value.push(res.data);
+        closeModal();
+      }
     }
-
-    const res = await axios.post(apiBaseUrl, newTask);
-
-    if (res?.status === 201) {
-      alert("Tarefa criada com sucesso!")
-      tasks.value.push(res.data);
-      closeModal();
-    }
-
   } catch (error) {
-    console.error('Erro ao adicionar tarefa:', error);
+    console.error('Erro ao adicionar ou editar tarefa:', error);
   } finally {
     loadingSubmitTask.value = false;
   }
-}
+};
 
+const editTask = (task: Task) => {
+  isEditModel.value = true;
+  modalData.value = { ...task };
+  isModalOpen.value = true;
+}
 
 const toggleTaskStatus = async (task: Task) => {
   try {
@@ -136,10 +170,19 @@ const toggleTaskStatus = async (task: Task) => {
   }
 }
 
-const deleteTask = async (taskId: number) => {
+const confirmDeleteTask = (taskId: number) => {
+  taskToDelete.value = taskId;
+  dialogVisible.value = true;
+}
+
+
+const deleteTaskConfirmed = async () => {
   try {
-    await axios.delete(`${apiBaseUrl}/${taskId}`);
-    tasks.value = tasks.value.filter(task => task.id !== taskId);
+    if (taskToDelete.value !== null) {
+      await axios.delete(`${apiBaseUrl}/${taskToDelete.value}`);
+      tasks.value = tasks.value.filter(task => task.id !== taskToDelete.value);
+      dialogVisible.value = false;
+    }
   } catch (error) {
     console.error('Erro ao deletar tarefa:', error);
   }
@@ -148,6 +191,7 @@ const deleteTask = async (taskId: number) => {
 const closeModal = () => {
   modalData.value = { title: '', description: '' };
   isModalOpen.value = false;
+  isEditModel.value = false;
 }
 
 const openModal = () => {
@@ -163,6 +207,7 @@ const progress = computed(() => {
 const completedTasks = computed(() => tasks.value.filter(task => task.completed).length);
 const incompleteTasks = computed(() => tasks.value.filter(task => !task.completed).length);
 </script>
+
 
 
 <style scoped>
