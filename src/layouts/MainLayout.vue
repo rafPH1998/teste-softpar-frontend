@@ -38,12 +38,6 @@ const linksList: EssentialLinkProps[] = [
     caption: '',
     icon: 'checklist',
     link: 'https://quasar.dev'
-  },
-  {
-    title: 'Sair',
-    caption: '',
-    icon: 'logout',
-    link: 'https://quasar.dev'
   }
 ];
 
