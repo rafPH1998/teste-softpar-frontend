@@ -1,7 +1,12 @@
 <template>
   <q-page class="q-pa-md" style="background-color: #e7f1fc; min-height: 100vh;">
     <div class="q-mb-md bg-white q-pa-md">
-      <div class="q-row q-gutter-md" style="display: flex; justify-content: space-between;">
+      <!-- Botão de Filtro (visível apenas no mobile) -->
+      <q-btn class="q-mb-md" label="Filtrar" color="primary" icon="filter_list" @click="dialogFilter = true"
+        v-show="isMobile" />
+
+      <!-- Filtros para desktop -->
+      <div class="q-row q-gutter-md" style="display: flex; justify-content: space-between;" v-show="!isMobile">
         <div class="q-col" style="flex: 1;">
           <q-select v-model="filters.status" :options="['Concluídas', 'Pendentes']" label="Status"
             @input="applyFilters" />
@@ -23,6 +28,31 @@
           <q-btn icon="delete" label="Limpar Filtros" color="red" flat @click="clearFilters" />
         </div>
       </div>
+
+      <!-- Filtros (Mobile) -->
+      <q-dialog v-model="dialogFilter">
+        <q-card>
+          <q-card-section>
+            <div class="text-h6">Filtros</div>
+          </q-card-section>
+
+          <q-card-section>
+            <q-select v-model="filters.status" :options="['Concluídas', 'Pendentes']" label="Status"
+              @input="applyFilters" />
+            <q-input v-model="filters.dateStart" label="Data Inicial" mask="date" type="date" @input="applyFilters"
+              class="q-mt-md" />
+            <q-input v-model="filters.dateEnd" label="Data Final" mask="date" type="date" @input="applyFilters"
+              class="q-mt-md" />
+            <q-select v-model="filters.orderBy" :options="['Título', 'Data']" label="Ordenar por" @input="applyFilters"
+              class="q-mt-md" />
+          </q-card-section>
+
+          <q-card-actions align="right">
+            <q-btn flat label="Fechar" color="primary" @click="dialogFilter = false" />
+            <q-btn flat label="Limpar Filtros" color="red" @click="clearFilters" />
+          </q-card-actions>
+        </q-card>
+      </q-dialog>
     </div>
 
     <div class="row justify-center q-mb-md">
@@ -106,6 +136,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { useQuasar } from "quasar";
 
 interface Task {
   id: number;
@@ -115,12 +146,19 @@ interface Task {
   completed_at?: string | null;
 }
 
+const $q = useQuasar();
+const isMobile = computed(() => $q.screen.lt.sm);
+
 const tasks = ref<Task[]>([]);
+
 const isModalOpen = ref<boolean>(false);
 const isEditModel = ref<boolean>(false);
-const loadingSubmitTask = ref<boolean>(false);
 const modalData = ref<{ id?: number; title: string; description: string }>({ title: '', description: '' });
+
+const loadingSubmitTask = ref<boolean>(false);
 const dialogVisible = ref<boolean>(false);
+const dialogFilter = ref<boolean>(false);
+
 const taskToDelete = ref<number | null>(null);
 const messageModal = ref<string | null>(null);
 
