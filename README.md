@@ -2,6 +2,11 @@
 
 ## Esse projeto tem como finalidade criar uma interface agradavél e simples para listar, criar e atualizar uma lista de tarefas, consumindo da API https://github.com/rafPH1998/teste-softpar-api. É de suma importância que sua API esteja rodando para ter sucesso no uso dessa aplicação desse repositório.
 
+### Tecnologias utilizadas
+
+- **`Vuejs3`**
+- **`Quasar`**
+
 ## Clone o repositório
 
 ```bash
