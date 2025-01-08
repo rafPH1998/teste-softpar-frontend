@@ -8,7 +8,7 @@
           Quasar App
         </q-toolbar-title>
 
-        <div>Bem vindo, Rafael</div>
+        <div>Bem vindo, usuário</div>
       </q-toolbar>
     </q-header>
 

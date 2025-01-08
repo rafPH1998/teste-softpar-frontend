@@ -1,5 +1,30 @@
 <template>
   <q-page class="q-pa-md" style="background-color: #e7f1fc; min-height: 100vh;">
+    <div class="q-mb-md bg-white q-pa-md">
+      <div class="q-row q-gutter-md" style="display: flex; justify-content: space-between;">
+        <div class="q-col" style="flex: 1;">
+          <q-select v-model="filters.status" :options="['Concluídas', 'Pendentes']" label="Status"
+            @input="applyFilters" />
+        </div>
+
+        <div class="q-col" style="flex: 1;">
+          <q-input v-model="filters.dateStart" label="Data Inicial" mask="date" type="date" @input="applyFilters" />
+        </div>
+
+        <div class="q-col" style="flex: 1;">
+          <q-input v-model="filters.dateEnd" label="Data Final" mask="date" type="date" @input="applyFilters" />
+        </div>
+
+        <div class="q-col" style="flex: 1;">
+          <q-select v-model="filters.orderBy" :options="['Título', 'Data']" label="Ordenar por" @input="applyFilters" />
+        </div>
+
+        <div class="q-col-auto">
+          <q-btn icon="delete" label="Limpar Filtros" color="red" flat @click="clearFilters" />
+        </div>
+      </div>
+    </div>
+
     <div class="row justify-center q-mb-md">
       <q-card class="q-pa-md text-center col-3 q-mx-sm">
         <q-icon name="check_circle" size="2rem" color="green" />
@@ -29,6 +54,9 @@
 
       <div v-for="task in tasks" :key="task.id" class="q-my-md task-item" style="transition: transform 0.3s;">
         <h5 class="text-left text-primary">{{ task.title }}</h5>
+        <p v-if="task.completed" class="text-left text-grey q-my-sm">
+          Completado em: {{ task.completed_at }}
+        </p>
         <div class="row no-wrap items-center">
           <q-checkbox v-model="task.completed" class="q-mr-sm" color="primary"
             @update:model-value="toggleTaskStatus(task)" />
@@ -59,7 +87,7 @@
     <q-dialog v-model="isModalOpen">
       <q-card>
         <q-card-section>
-          <div class="text-h6 text-primary">Adicionar Nova Tarefa</div>
+          <div class="text-h6 text-primary">{{ messageModal }}</div>
         </q-card-section>
         <q-card-section>
           <q-input v-model="modalData.title" label="Título da Tarefa" outlined dense class="q-my-md" />
@@ -67,7 +95,7 @@
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" color="secondary" @click="closeModal" />
-          <q-btn flat label="Adicionar" :loading="loadingSubmitTask" :disable="loadingSubmitTask" color="primary"
+          <q-btn flat label="Salvar" :loading="loadingSubmitTask" :disable="loadingSubmitTask" color="primary"
             @click="addOrEditTask" />
         </q-card-actions>
       </q-card>
@@ -75,18 +103,16 @@
   </q-page>
 </template>
 
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
-
 
 interface Task {
   id: number;
   title: string;
   description: string;
   completed: boolean;
-  completedAt?: string | null;
+  completed_at?: string | null;
 }
 
 const tasks = ref<Task[]>([]);
@@ -96,6 +122,19 @@ const loadingSubmitTask = ref<boolean>(false);
 const modalData = ref<{ id?: number; title: string; description: string }>({ title: '', description: '' });
 const dialogVisible = ref<boolean>(false);
 const taskToDelete = ref<number | null>(null);
+const messageModal = ref<string | null>(null);
+
+const filters = ref<{
+  status: 'Concluídas' | 'Pendentes' | '';
+  orderBy: 'Título' | 'Data' | '';
+  dateStart: string;
+  dateEnd: string;
+}>({
+  status: '',
+  orderBy: '',
+  dateStart: '',
+  dateEnd: '',
+});
 
 const apiBaseUrl = 'http://localhost:8085/api/tasks';
 
@@ -103,23 +142,61 @@ onMounted(async () => {
   await fetchTasks()
 })
 
+const statusMapping: Record<'Concluídas' | 'Pendentes', string> = {
+  'Concluídas': 'completed',
+  'Pendentes': 'pending',
+}
+
+const orderByMapping: Record<'Título' | 'Data', string> = {
+  'Título': 'title',
+  'Data': 'created_at',
+}
+
 const fetchTasks = async () => {
+  const mappedStatus = statusMapping[filters.value.status as keyof typeof statusMapping] || '';
+  const orderMapping = orderByMapping[filters.value.orderBy as keyof typeof orderByMapping] || '';
+
   try {
-    const response = await axios.get(apiBaseUrl);
+    const response = await axios.get(apiBaseUrl, {
+      params: {
+        status: mappedStatus,
+        order_by: orderMapping,
+        date_start: filters.value.dateStart,
+        date_end: filters.value.dateEnd,
+      }
+    });
     tasks.value = response.data.tasks.map((task: Task) => ({
       id: task.id,
       title: task.title,
       description: task.description,
       completed: task.completed,
-      completedAt: task.completedAt || null,
+      completed_at: task.completed_at || null,
     }));
-
   } catch (error) {
     console.error('Erro ao buscar tarefas:', error);
   }
 }
 
+watch(filters, () => {
+  fetchTasks();
+}, { deep: true });
+
+const applyFilters = async () => {
+  await fetchTasks();
+}
+
+const clearFilters = async () => {
+  filters.value = {
+    status: '',
+    orderBy: '',
+    dateStart: '',
+    dateEnd: '',
+  };
+  await fetchTasks();
+}
+
 const addOrEditTask = async () => {
+
   try {
     loadingSubmitTask.value = true;
 
@@ -156,6 +233,7 @@ const addOrEditTask = async () => {
 };
 
 const editTask = (task: Task) => {
+  messageModal.value = "Editar tarefa"
   isEditModel.value = true;
   modalData.value = { ...task };
   isModalOpen.value = true;
@@ -164,7 +242,7 @@ const editTask = (task: Task) => {
 const toggleTaskStatus = async (task: Task) => {
   try {
     await axios.patch(`${apiBaseUrl}/${task.id}/update-status`);
-    task.completedAt = task.completed ? new Date().toISOString() : null;
+    task.completed_at = task.completed ? new Date().toISOString() : null;
   } catch (error) {
     console.error('Erro ao atualizar status da tarefa:', error);
   }
@@ -174,7 +252,6 @@ const confirmDeleteTask = (taskId: number) => {
   taskToDelete.value = taskId;
   dialogVisible.value = true;
 }
-
 
 const deleteTaskConfirmed = async () => {
   try {
@@ -192,10 +269,12 @@ const closeModal = () => {
   modalData.value = { title: '', description: '' };
   isModalOpen.value = false;
   isEditModel.value = false;
+  messageModal.value = ""
 }
 
 const openModal = () => {
   isModalOpen.value = true;
+  messageModal.value = "Adicionar nova tarefa"
 }
 
 const progress = computed(() => {

@@ -1,40 +1,39 @@
-# Quasar App (todo-list)
+# Para rodar a aplicação, siga o passo a passo
 
-Todo list ]
+## Esse projeto tem como finalidade criar uma interface agradavél e simples para listar, criar e atualizar uma lista de tarefas, consumindo da API https://github.com/rafPH1998/teste-softpar-api. É de suma importância que sua API esteja rodando para ter sucesso na instalação desse repositório.
 
-## Install the dependencies
+## Clone o repositório
+
+```bash
+git clone https://github.com/rafPH1998/teste-softpar-frontend.git
+```
+
+## Acesse a pasta
+
+```bash
+cd teste-softpar-frontend
+```
+
+## Instale as dependências
+
 ```bash
 yarn
 # or
 npm install
 ```
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
+### Inicie o aplicativo no modo de desenvolvimento
+
 ```bash
 quasar dev
 ```
 
+### Crie o aplicativo para produção
 
-### Lint the files
-```bash
-yarn lint
-# or
-npm run lint
-```
-
-
-### Format the files
-```bash
-yarn format
-# or
-npm run format
-```
-
-
-### Build the app for production
 ```bash
 quasar build
 ```
 
-### Customize the configuration
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).
+### Visualização do layout
+
+![alt text](image.png)
